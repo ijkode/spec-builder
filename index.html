@@ -129,9 +129,9 @@
       <span class="mark"><b>#</b> Spec Builder</span>
       <span class="sub">build an integration spec &rarr; download Word (.docx)</span>
     </div>
-    <div class="mobile-tabs" role="tablist">
-      <button id="tabEdit" class="on">Editor</button>
-      <button id="tabPrev">Preview</button>
+    <div class="mobile-tabs" role="tablist" aria-label="Editor or preview">
+      <button id="tabEdit" class="on" role="tab" aria-selected="true" aria-controls="editor">Editor</button>
+      <button id="tabPrev" role="tab" aria-selected="false" aria-controls="preview">Preview</button>
     </div>
     <div class="bar-actions">
       <span id="saveFlag" class="save-flag"></span>
@@ -141,15 +141,14 @@
   </header>
 
   <div class="panes">
-    <div class="editor show" id="editor">
+    <div class="editor show" id="editor" role="tabpanel" aria-label="Editor">
 
       <!-- Cover -->
       <div class="card">
         <div class="sec-head"><span class="sec-num">Cover</span><span class="sec-title">Title</span></div>
         <div class="two">
           <div class="field"><label class="lbl" for="project">Project Name</label><input type="text" id="project" placeholder="Project Name"></div>
-          <div class="field"><label class="lbl" for="integrationName">Integration name</label><input type="text" id="integrationName" placeholder="Integration name
-"></div>
+          <div class="field"><label class="lbl" for="integrationName">Integration Name</label><input type="text" id="integrationName" placeholder="Integration Name"></div>
         </div>
         <div class="field"><label class="lbl" for="preparedBy">Prepared by <span class="hint">&mdash; optional</span></label><input type="text" id="preparedBy" placeholder="Prepared by"></div>
       </div>
@@ -166,7 +165,7 @@
         <div class="sec-head"><span class="sec-num">1</span><span class="sec-title">Purpose</span></div>
         <div class="field"><label class="lbl" for="desc">Description</label><textarea id="desc" placeholder="Detailed purpose."></textarea></div>
         <div class="field"><label class="lbl" for="direction">Direction</label><input type="text" id="direction" placeholder="Which system triggers the job"></div>
-        <div class="field"><label class="lbl">Org <span class="hint">&mdash; optional</span></label><div id="orgArea"></div></div>
+        <div class="field"><label class="lbl">Org(s) <span class="hint">&mdash; optional, add one or more</span></label><div id="orgArea"></div></div>
       </div>
 
       <!-- 2 Scope -->
@@ -238,13 +237,13 @@
 
     </div>
 
-    <div class="preview" id="preview">
+    <div class="preview" id="preview" role="tabpanel" aria-label="Document preview">
       <div class="preview-head">
         <span class="name" id="fileName">specification.docx</span>
         <button id="copyBtn">Copy text</button>
         <button id="downloadBtn" class="primary">Download .docx</button>
       </div>
-      <div class="doc"><div class="page" id="page"></div></div>
+      <div class="doc"><div class="page" id="page" aria-live="polite"></div></div>
     </div>
   </div>
 </div>
@@ -268,7 +267,7 @@
     return {
       project:"", integrationName:"", preparedBy:"",
       systemsDesc:"", systemsTable:makeTable(SYSTEMS_COLS),
-      desc:"", org:"", orgEnabled:false, direction:"",
+      desc:"", orgs:[], direction:"",
       inScope:"", outScope:"",
       execType:"", frequency:"", triggerDesc:"", schemaTables:[],
       highDesc:"", highFlow:"", highFlowMode:"bullet", figureCaption:"",
@@ -302,18 +301,19 @@
   /* ---------- table editor markup ---------- */
   function tableInner(path){
     var t=getTableByPath(path); if(!t)return "";
-    var h='<input class="te-cap" type="text" data-tcap data-path="'+path+'" placeholder="Table caption (adds \u201cTable N \u2014 \u2026\u201d; leave blank to omit)" value="'+attrEsc(t.caption)+'">';
+    var h='<input class="te-cap" type="text" data-tcap data-path="'+path+'" aria-label="Table caption" placeholder="Table caption (adds \u201cTable N \u2014 \u2026\u201d; leave blank to omit)" value="'+attrEsc(t.caption)+'">';
     h+='<div class="te-scroll"><table class="te"><thead><tr>';
     t.columns.forEach(function(c,ci){
-      h+='<th><div style="display:flex;align-items:center"><input type="text" data-tcol="'+ci+'" data-path="'+path+'" value="'+attrEsc(c)+'"><button class="te-x" data-tdelcol="'+ci+'" data-path="'+path+'" title="Remove column">\u00d7</button></div></th>';
+      h+='<th><div style="display:flex;align-items:center"><input type="text" data-tcol="'+ci+'" data-path="'+path+'" aria-label="Column '+(ci+1)+' heading" value="'+attrEsc(c)+'"><button class="te-x" data-tdelcol="'+ci+'" data-path="'+path+'" aria-label="Remove column '+(ci+1)+'" title="Remove column">\u00d7</button></div></th>';
     });
     h+='<th class="te-corner"></th></tr></thead><tbody>';
     t.rows.forEach(function(row,ri){
       h+='<tr>';
       t.columns.forEach(function(_,ci){
-        h+='<td><input type="text" data-tcell="'+ri+','+ci+'" data-path="'+path+'" value="'+attrEsc(row[ci]||"")+'"></td>';
+        var cn=(t.columns[ci]||("column "+(ci+1)));
+        h+='<td><input type="text" data-tcell="'+ri+','+ci+'" data-path="'+path+'" aria-label="'+attrEsc(cn)+', row '+(ri+1)+'" value="'+attrEsc(row[ci]||"")+'"></td>';
       });
-      h+='<td><button class="te-x" data-tdelrow="'+ri+'" data-path="'+path+'" title="Remove row">\u00d7</button></td></tr>';
+      h+='<td><button class="te-x" data-tdelrow="'+ri+'" data-path="'+path+'" aria-label="Remove row '+(ri+1)+'" title="Remove row">\u00d7</button></td></tr>';
     });
     h+='</tbody></table></div>';
     h+='<div class="te-actions"><button class="small" data-taddrow data-path="'+path+'">+ Row</button><button class="small ghost" data-taddcol data-path="'+path+'">+ Column</button></div>';
@@ -329,14 +329,14 @@
     var path=scopePath(sc,i);
     var h='<div class="step-card">';
     h+='<div class="step-top">';
-    h+='<input class="step-label" type="text" data-sfield="label" data-scope="'+sc+'" data-si="'+i+'" placeholder="#'+(i+1)+'" value="'+attrEsc(step.label)+'">';
-    h+='<input class="step-title" type="text" data-sfield="title" data-scope="'+sc+'" data-si="'+i+'" placeholder="Step title" value="'+attrEsc(step.title)+'">';
+    h+='<input class="step-label" type="text" data-sfield="label" data-scope="'+sc+'" data-si="'+i+'" aria-label="Step number/label" placeholder="#'+(i+1)+'" value="'+attrEsc(step.label)+'">';
+    h+='<input class="step-title" type="text" data-sfield="title" data-scope="'+sc+'" data-si="'+i+'" aria-label="Step title" placeholder="Step title" value="'+attrEsc(step.title)+'">';
     h+='<span class="step-tools">';
-    h+='<button class="icon-btn" data-step-up data-scope="'+sc+'" data-si="'+i+'" title="Move up">\u2191</button>';
-    h+='<button class="icon-btn" data-step-down data-scope="'+sc+'" data-si="'+i+'" title="Move down">\u2193</button>';
-    h+='<button class="icon-btn danger" data-step-del data-scope="'+sc+'" data-si="'+i+'" title="Remove step">\u00d7</button>';
+    h+='<button class="icon-btn" data-step-up data-scope="'+sc+'" data-si="'+i+'" aria-label="Move step up" title="Move up">\u2191</button>';
+    h+='<button class="icon-btn" data-step-down data-scope="'+sc+'" data-si="'+i+'" aria-label="Move step down" title="Move down">\u2193</button>';
+    h+='<button class="icon-btn danger" data-step-del data-scope="'+sc+'" data-si="'+i+'" aria-label="Remove step" title="Remove step">\u00d7</button>';
     h+='</span></div>';
-    h+='<textarea class="step-desc" data-sfield="desc" data-scope="'+sc+'" data-si="'+i+'" placeholder="What this step does...">'+htmlEsc(step.desc)+'</textarea>';
+    h+='<textarea class="step-desc" data-sfield="desc" data-scope="'+sc+'" data-si="'+i+'" aria-label="Step description" placeholder="What this step does...">'+htmlEsc(step.desc)+'</textarea>';
     h+='<div class="step-tblwrap">';
     if(step.table){
       h+='<div class="tbl-editor" data-path="'+path+'">'+tableInner(path)+'</div>';
@@ -407,7 +407,9 @@
 
     h.push('<h2>1. Purpose</h2>');
     h.push(fieldLine("Description",s.desc));
-    if(s.org&&s.org.trim())h.push('<p><strong>Org:</strong> '+nl2br(htmlEsc(s.org.trim()))+'</p>');
+    var pOrgs=(s.orgs||[]).map(function(o){return (o||"").trim();}).filter(Boolean);
+    if(pOrgs.length===1)h.push('<p><strong>Org:</strong> '+nl2br(htmlEsc(pOrgs[0]))+'</p>');
+    else if(pOrgs.length>1)h.push('<p><strong>Orgs:</strong></p><ul class="d-ul">'+pOrgs.map(function(o){return '<li>'+htmlEsc(o)+'</li>';}).join("")+'</ul>');
     h.push(fieldLine("Direction",s.direction));
 
     h.push('<h2>2. Scope</h2>');
@@ -512,7 +514,9 @@
 
     b.push(heading("1. Purpose",1));
     b.push(labelPara("Description",s.desc));
-    if(s.org&&s.org.trim())b.push(labelPara("Org",s.org));
+    var dOrgs=(s.orgs||[]).map(function(o){return (o||"").trim();}).filter(Boolean);
+    if(dOrgs.length===1)b.push(labelPara("Org",dOrgs[0]));
+    else if(dOrgs.length>1){b.push(para(run("Orgs:",{bold:true})));dOrgs.forEach(function(o){b.push(para(run("\u2022 "+o),"ListParagraph"));});}
     b.push(labelPara("Direction",s.direction));
 
     b.push(heading("2. Scope",1));
@@ -625,19 +629,22 @@
   }
   function flag(t){saveFlag.textContent="\u2713 "+t;if(flagTimer)clearTimeout(flagTimer);flagTimer=setTimeout(function(){saveFlag.textContent="";},1500);}
 
-  function renderOrg(){
+  function renderOrgs(){
     var el=byId("orgArea");if(!el)return;
-    if(state.orgEnabled){
-      el.innerHTML='<div style="display:flex;gap:8px;align-items:center"><input type="text" data-optfield="org" placeholder="Which org is involved" value="'+attrEsc(state.org)+'" style="flex:1"><button class="icon-btn danger" data-del-org title="Remove Org">\u00d7</button></div>';
-    }else{
-      el.innerHTML='<button class="ghost small" data-add-org>+ Add Org</button>';
-    }
+    var h="";
+    (state.orgs||[]).forEach(function(v,i){
+      h+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><input type="text" data-orgidx="'+i+'" aria-label="Org '+(i+1)+'" placeholder="Which org is involved" value="'+attrEsc(v)+'" style="flex:1"><button class="icon-btn danger" data-del-org data-orgidx="'+i+'" aria-label="Remove org '+(i+1)+'" title="Remove">\u00d7</button></div>';
+    });
+    h+='<button class="ghost small" data-add-org>+ Add Org</button>';
+    el.innerHTML=h;
   }
-  function renderAll(){renderOrg();renderSystems();renderSchema();renderSteps();renderErrSteps();renderOutcomes();render();}
+  function renderAll(){renderOrgs();renderSystems();renderSchema();renderSteps();renderErrSteps();renderOutcomes();render();}
   function syncInputs(){
-    if(state.org&&state.org.trim())state.orgEnabled=true;
+    if(!Array.isArray(state.orgs))state.orgs=[];
+    if(typeof state.org==="string"&&state.org.trim()){state.orgs.push(state.org.trim());}
+    state.org="";
     TEXT_FIELDS.forEach(function(k){var el=byId(k);if(el)el.value=state[k]||"";});
-    document.querySelectorAll("[data-seg]").forEach(function(seg){[].forEach.call(seg.children,function(c){c.classList.toggle("on",c.dataset.mode===state[seg.dataset.seg]);});});
+    document.querySelectorAll("[data-seg]").forEach(function(seg){[].forEach.call(seg.children,function(c){var on=c.dataset.mode===state[seg.dataset.seg];c.classList.toggle("on",on);c.setAttribute("aria-pressed",on?"true":"false");});});
     renderAll();
   }
 
@@ -646,13 +653,16 @@
 
   TEXT_FIELDS.forEach(function(k){var el=byId(k);if(el)el.addEventListener("input",function(){state[k]=el.value;render();});});
 
-  var SEG_OPTS=[["plain","\u00b6"],["bullet","\u2022"],["number","1."]];
+  var SEG_OPTS=[["plain","\u00b6","Paragraph text"],["bullet","\u2022","Bulleted list"],["number","1.","Numbered list"]];
   document.querySelectorAll("[data-seg]").forEach(function(seg){
     var key=seg.dataset.seg;
+    seg.setAttribute("role","group");
+    seg.setAttribute("aria-label","List format");
     SEG_OPTS.forEach(function(opt){
-      var b=document.createElement("button");b.textContent=opt[1];b.title=opt[0];b.dataset.mode=opt[0];
-      if(state[key]===opt[0])b.classList.add("on");
-      b.addEventListener("click",function(){state[key]=opt[0];[].forEach.call(seg.children,function(c){c.classList.toggle("on",c===b);});render();});
+      var b=document.createElement("button");b.textContent=opt[1];b.title=opt[2];b.dataset.mode=opt[0];
+      b.setAttribute("type","button");b.setAttribute("aria-label",opt[2]);
+      var on=state[key]===opt[0];b.classList.toggle("on",on);b.setAttribute("aria-pressed",on?"true":"false");
+      b.addEventListener("click",function(){state[key]=opt[0];[].forEach.call(seg.children,function(c){var sel=c===b;c.classList.toggle("on",sel);c.setAttribute("aria-pressed",sel?"true":"false");});render();});
       seg.appendChild(b);
     });
   });
@@ -663,7 +673,7 @@
     if(d.path!==undefined&&d.tcol!==undefined){getTableByPath(d.path).columns[+d.tcol]=e.target.value;return render();}
     if(d.path!==undefined&&d.tcell!==undefined){var rc=d.tcell.split(",");getTableByPath(d.path).rows[+rc[0]][+rc[1]]=e.target.value;return render();}
     if(d.sfield!==undefined){scopeArr(d.scope)[+d.si][d.sfield]=e.target.value;return render();}
-    if(d.optfield!==undefined){state[d.optfield]=e.target.value;return render();}
+    if(d.orgidx!==undefined){state.orgs[+d.orgidx]=e.target.value;return render();}
   });
 
   function swap(a,i,j){if(j<0||j>=a.length)return false;var t=a[i];a[i]=a[j];a[j]=t;return true;}
@@ -685,8 +695,8 @@
     if(d.stepDown!==undefined){if(swap(scopeArr(d.scope),+d.si,+d.si+1))renderScope(d.scope);return render();}
     if(d.stepAddtable!==undefined){scopeArr(d.scope)[+d.si].table=makeTable(MAPPING_COLS);renderScope(d.scope);return render();}
     if(d.stepDeltable!==undefined){scopeArr(d.scope)[+d.si].table=null;renderScope(d.scope);return render();}
-    if(d.addOrg!==undefined){state.orgEnabled=true;renderOrg();return render();}
-    if(d.delOrg!==undefined){state.orgEnabled=false;state.org="";renderOrg();return render();}
+    if(d.addOrg!==undefined){state.orgs.push("");renderOrgs();return render();}
+    if(d.delOrg!==undefined){state.orgs.splice(+d.orgidx,1);renderOrgs();return render();}
     if(d.addSchema!==undefined){state.schemaTables.push(makeTable(SCHEMA_COLS));renderSchema();return render();}
     if(d.delSchema!==undefined){state.schemaTables.splice(+d.si,1);renderSchema();return render();}
   });
@@ -713,16 +723,17 @@
     syncInputs();
   });
 
-  byId("tabEdit").addEventListener("click",function(){byId("editor").classList.add("show");byId("preview").classList.remove("show");this.classList.add("on");byId("tabPrev").classList.remove("on");});
-  byId("tabPrev").addEventListener("click",function(){byId("preview").classList.add("show");byId("editor").classList.remove("show");this.classList.add("on");byId("tabEdit").classList.remove("on");});
+  byId("tabEdit").addEventListener("click",function(){byId("editor").classList.add("show");byId("preview").classList.remove("show");this.classList.add("on");this.setAttribute("aria-selected","true");var p=byId("tabPrev");p.classList.remove("on");p.setAttribute("aria-selected","false");});
+  byId("tabPrev").addEventListener("click",function(){byId("preview").classList.add("show");byId("editor").classList.remove("show");this.classList.add("on");this.setAttribute("aria-selected","true");var e=byId("tabEdit");e.classList.remove("on");e.setAttribute("aria-selected","false");});
 
   /* ---------- Hebrew -> English translation (free MyMemory API) ---------- */
   function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
   function collectSlots(){
     var slots=[];
-    ["project","integrationName","preparedBy","systemsDesc","desc","org","direction","inScope","outScope","execType","frequency","triggerDesc","highDesc","highFlow","figureCaption","detailIntro","errDesc","errBullets","endDesc","endClosing"].forEach(function(k){
+    ["project","integrationName","preparedBy","systemsDesc","desc","direction","inScope","outScope","execType","frequency","triggerDesc","highDesc","highFlow","figureCaption","detailIntro","errDesc","errBullets","endDesc","endClosing"].forEach(function(k){
       slots.push({get:function(){return state[k];},set:function(v){state[k]=v;}});
     });
+    (state.orgs||[]).forEach(function(_,i){slots.push({get:function(){return state.orgs[i];},set:function(v){state.orgs[i]=v;}});});
     function addTable(t){
       if(!t)return;
       slots.push({get:function(){return t.caption;},set:function(v){t.caption=v;}});

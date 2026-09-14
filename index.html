@@ -135,6 +135,9 @@
     </div>
     <div class="bar-actions">
       <span id="saveFlag" class="save-flag"></span>
+      <button id="saveFile" class="ghost" title="Download this spec as a .json file you can back up or re-open later.">Save file</button>
+      <button id="openFile" class="ghost" title="Open a spec from a .json file.">Open file</button>
+      <input type="file" id="fileInput" accept=".json,application/json" style="display:none" aria-hidden="true">
       <button id="translateBtn" class="ghost" title="Sends Hebrew text to a free translation service (MyMemory) and replaces it with English.">Translate &rarr; EN</button>
       <button id="clearAll" class="ghost">Clear</button>
     </div>
@@ -151,6 +154,7 @@
           <div class="field"><label class="lbl" for="integrationName">Integration Name</label><input type="text" id="integrationName" placeholder="Integration Name"></div>
         </div>
         <div class="field"><label class="lbl" for="preparedBy">Prepared by <span class="hint">&mdash; optional</span></label><input type="text" id="preparedBy" placeholder="Prepared by"></div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="tocToggle" style="width:auto;margin:0"> Include a table of contents &amp; page numbers</label>
       </div>
 
       <!-- Systems -->
@@ -265,7 +269,7 @@
 
   function defaultState(){
     return {
-      project:"", integrationName:"", preparedBy:"",
+      project:"", integrationName:"", preparedBy:"", toc:true,
       systemsDesc:"", systemsTable:makeTable(SYSTEMS_COLS),
       desc:"", orgs:[], direction:"",
       inScope:"", outScope:"",
@@ -334,6 +338,7 @@
     h+='<span class="step-tools">';
     h+='<button class="icon-btn" data-step-up data-scope="'+sc+'" data-si="'+i+'" aria-label="Move step up" title="Move up">\u2191</button>';
     h+='<button class="icon-btn" data-step-down data-scope="'+sc+'" data-si="'+i+'" aria-label="Move step down" title="Move down">\u2193</button>';
+    h+='<button class="icon-btn" data-step-dup data-scope="'+sc+'" data-si="'+i+'" aria-label="Duplicate step" title="Duplicate">\u29c9</button>';
     h+='<button class="icon-btn danger" data-step-del data-scope="'+sc+'" data-si="'+i+'" aria-label="Remove step" title="Remove step">\u00d7</button>';
     h+='</span></div>';
     h+='<textarea class="step-desc" data-sfield="desc" data-scope="'+sc+'" data-si="'+i+'" aria-label="Step description" placeholder="What this step does...">'+htmlEsc(step.desc)+'</textarea>';
@@ -398,6 +403,7 @@
     h.push('<div class="d-title">'+htmlEsc(title)+'</div>');
     if(s.integrationName.trim())h.push('<p class="d-sub">'+htmlEsc(s.integrationName.trim())+'</p>');
     if(s.preparedBy.trim())h.push('<p class="d-meta">Prepared by: '+htmlEsc(s.preparedBy.trim())+'</p>');
+    if(s.toc)h.push('<p class="d-meta" style="margin-top:10px"><em>Contents &mdash; a clickable table of contents and page numbers are generated in the Word file.</em></p>');
 
     if(s.systemsDesc.trim()||tableHasContent(s.systemsTable)){
       h.push('<h2>Systems &amp; Connections</h2>');
@@ -506,6 +512,12 @@
     if(s.integrationName.trim())b.push(para(run(s.integrationName.trim(),{italic:true,color:"5A6675",sz:24})));
     if(s.preparedBy.trim())b.push(para(run("Prepared by: "+s.preparedBy.trim(),{color:"6A7686",sz:18})));
 
+    if(s.toc){
+      b.push('<w:p><w:pPr><w:spacing w:before="200" w:after="80"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="1F3864"/><w:sz w:val="28"/></w:rPr><w:t>Contents</w:t></w:r></w:p>');
+      b.push('<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:color w:val="808080"/></w:rPr><w:t>Right-click here and choose \u201cUpdate Field\u201d to build the table of contents.</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>');
+      b.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+    }
+
     if(s.systemsDesc.trim()||tableHasContent(s.systemsTable)){
       b.push(heading("Systems & Connections",1));
       if(s.systemsDesc.trim())b.push(para(run(s.systemsDesc.trim())));
@@ -549,8 +561,29 @@
     b.push(docTableXml(s.outcomesTable,ctr));
     if(s.endClosing.trim())b.push(para(run(s.endClosing.trim())));
 
-    var sect='<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>';
-    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+b.join("")+para("")+sect+'</w:body></w:document>';
+    var sect='<w:sectPr><w:headerReference w:type="default" r:id="rId3"/><w:footerReference w:type="default" r:id="rId4"/><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>'+b.join("")+para("")+sect+'</w:body></w:document>';
+  }
+  function settingsXml(){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:updateFields w:val="true"/></w:settings>';
+  }
+  function headerXml(s){
+    var name=(s.project.trim()||s.integrationName.trim()||"Integration Specification");
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+    '<w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:color w:val="9AA4B2"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:t xml:space="preserve">'+xesc(name)+'</w:t></w:r></w:p></w:hdr>';
+  }
+  function footerXml(){
+    var rpr='<w:rPr><w:color w:val="9AA4B2"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+    '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'+
+    '<w:r>'+rpr+'<w:t xml:space="preserve">Page </w:t></w:r>'+
+    '<w:r>'+rpr+'<w:fldChar w:fldCharType="begin"/></w:r><w:r>'+rpr+'<w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r>'+rpr+'<w:fldChar w:fldCharType="separate"/></w:r><w:r>'+rpr+'<w:t>1</w:t></w:r><w:r>'+rpr+'<w:fldChar w:fldCharType="end"/></w:r>'+
+    '<w:r>'+rpr+'<w:t xml:space="preserve"> of </w:t></w:r>'+
+    '<w:r>'+rpr+'<w:fldChar w:fldCharType="begin"/></w:r><w:r>'+rpr+'<w:instrText xml:space="preserve"> NUMPAGES </w:instrText></w:r><w:r>'+rpr+'<w:fldChar w:fldCharType="separate"/></w:r><w:r>'+rpr+'<w:t>1</w:t></w:r><w:r>'+rpr+'<w:fldChar w:fldCharType="end"/></w:r>'+
+    '</w:p></w:ftr>';
   }
   function stylesXml(){
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
@@ -572,10 +605,13 @@
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
     '<Default Extension="xml" ContentType="application/xml"/>'+
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
-    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>';
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'+
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
+    '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'+
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>';
   }
   function rootRelsXml(){return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';}
-  function docRelsXml(){return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';}
+  function docRelsXml(){return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>';}
 
   /* ---------- ZIP writer ---------- */
   function crc32(bytes){var t=crc32._t;if(!t){t=crc32._t=[];for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++){c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);}t[n]=c>>>0;}}var crc=0xFFFFFFFF;for(var i=0;i<bytes.length;i++){crc=(crc>>>8)^t[(crc^bytes[i])&0xFF];}return (crc^0xFFFFFFFF)>>>0;}
@@ -604,6 +640,9 @@
       {name:"_rels/.rels",data:rootRelsXml()},
       {name:"word/document.xml",data:buildDocumentXml(state)},
       {name:"word/styles.xml",data:stylesXml()},
+      {name:"word/settings.xml",data:settingsXml()},
+      {name:"word/header1.xml",data:headerXml(state)},
+      {name:"word/footer1.xml",data:footerXml()},
       {name:"word/_rels/document.xml.rels",data:docRelsXml()}
     ];
     return new Blob([makeZip(files)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
@@ -643,6 +682,7 @@
     if(!Array.isArray(state.orgs))state.orgs=[];
     if(typeof state.org==="string"&&state.org.trim()){state.orgs.push(state.org.trim());}
     state.org="";
+    var tc=byId("tocToggle");if(tc)tc.checked=!!state.toc;
     TEXT_FIELDS.forEach(function(k){var el=byId(k);if(el)el.value=state[k]||"";});
     document.querySelectorAll("[data-seg]").forEach(function(seg){[].forEach.call(seg.children,function(c){var on=c.dataset.mode===state[seg.dataset.seg];c.classList.toggle("on",on);c.setAttribute("aria-pressed",on?"true":"false");});});
     renderAll();
@@ -652,6 +692,7 @@
   var editor=byId("editor");
 
   TEXT_FIELDS.forEach(function(k){var el=byId(k);if(el)el.addEventListener("input",function(){state[k]=el.value;render();});});
+  byId("tocToggle").addEventListener("change",function(){state.toc=this.checked;render();});
 
   var SEG_OPTS=[["plain","\u00b6","Paragraph text"],["bullet","\u2022","Bulleted list"],["number","1.","Numbered list"]];
   document.querySelectorAll("[data-seg]").forEach(function(seg){
@@ -693,12 +734,35 @@
     if(d.stepDel!==undefined){scopeArr(d.scope).splice(+d.si,1);renderScope(d.scope);return render();}
     if(d.stepUp!==undefined){if(swap(scopeArr(d.scope),+d.si,+d.si-1))renderScope(d.scope);return render();}
     if(d.stepDown!==undefined){if(swap(scopeArr(d.scope),+d.si,+d.si+1))renderScope(d.scope);return render();}
+    if(d.stepDup!==undefined){var a=scopeArr(d.scope),si=+d.si;a.splice(si+1,0,JSON.parse(JSON.stringify(a[si])));renderScope(d.scope);return render();}
     if(d.stepAddtable!==undefined){scopeArr(d.scope)[+d.si].table=makeTable(MAPPING_COLS);renderScope(d.scope);return render();}
     if(d.stepDeltable!==undefined){scopeArr(d.scope)[+d.si].table=null;renderScope(d.scope);return render();}
     if(d.addOrg!==undefined){state.orgs.push("");renderOrgs();return render();}
     if(d.delOrg!==undefined){state.orgs.splice(+d.orgidx,1);renderOrgs();return render();}
     if(d.addSchema!==undefined){state.schemaTables.push(makeTable(SCHEMA_COLS));renderSchema();return render();}
     if(d.delSchema!==undefined){state.schemaTables.splice(+d.si,1);renderSchema();return render();}
+  });
+
+  editor.addEventListener("paste",function(e){
+    var el=e.target;
+    if(!el||!el.dataset||el.dataset.tcell===undefined)return;
+    var text=(e.clipboardData||window.clipboardData).getData("text");
+    if(!text||(text.indexOf("\t")<0&&text.indexOf("\n")<0))return; // single value: let default paste happen
+    e.preventDefault();
+    var path=el.dataset.path,t=getTableByPath(path);if(!t)return;
+    var rc=el.dataset.tcell.split(","),r0=+rc[0],c0=+rc[1];
+    var grid=text.replace(/\r/g,"").replace(/\n+$/,"").split("\n").map(function(line){return line.split("\t");});
+    grid.forEach(function(cells,ri){
+      var r=r0+ri;
+      while(t.rows.length<=r)t.rows.push(t.columns.map(function(){return "";}));
+      cells.forEach(function(val,ci){
+        var c=c0+ci;
+        while(t.columns.length<=c){t.columns.push("Column");t.rows.forEach(function(row){row.push("");});}
+        t.rows[r][c]=val;
+      });
+    });
+    t.rows.forEach(function(row){while(row.length<t.columns.length)row.push("");if(row.length>t.columns.length)row.length=t.columns.length;});
+    rerenderTable(path);render();
   });
 
   byId("downloadBtn").addEventListener("click",function(){
@@ -710,6 +774,25 @@
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject())
       .then(function(){btn.textContent="Copied";btn.classList.add("ok");setTimeout(function(){btn.textContent="Copy text";btn.classList.remove("ok");},1400);})
       .catch(function(){var ta=document.createElement("textarea");ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");}catch(e){}document.body.removeChild(ta);btn.textContent="Copied";setTimeout(function(){btn.textContent="Copy text";},1400);});
+  });
+
+  byId("saveFile").addEventListener("click",function(){
+    try{
+      var blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+      var url=URL.createObjectURL(blob),a=document.createElement("a");
+      a.href=url;a.download=fileBase()+".json";document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(url);},600);
+    }catch(err){console.error(err);}
+  });
+  byId("openFile").addEventListener("click",function(){byId("fileInput").click();});
+  byId("fileInput").addEventListener("change",function(e){
+    var f=e.target.files&&e.target.files[0];if(!f)return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{var obj=JSON.parse(rd.result);if(!obj||typeof obj!=="object")throw new Error("bad");state=Object.assign(defaultState(),obj);syncInputs();}
+      catch(err){var b=byId("openFile");b.textContent="Invalid file";setTimeout(function(){b.textContent="Open file";},2000);}
+    };
+    rd.readAsText(f);e.target.value="";
   });
 
   var clearArmed=false,clearTimer2=null;

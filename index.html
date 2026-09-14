@@ -200,7 +200,7 @@
           <div class="field"><label class="lbl" for="execType">Execution type</label><input type="text" id="execType" placeholder="Event-driven, synchronous"></div>
           <div class="field"><label class="lbl" for="frequency">Frequency</label><input type="text" id="frequency" placeholder="On demand"></div>
         </div>
-        <div class="field"><label class="lbl" for="triggerDesc">3.1 Application trigger conditions</label><textarea id="triggerDesc" placeholder="Describe the trigger step and payload."></textarea></div>
+        <div class="field"><label class="lbl" for="triggerDesc">Trigger conditions</label><textarea id="triggerDesc" placeholder="Describe the trigger step and payload."></textarea></div>
         <div class="field">
           <label class="lbl">I/O schema tables <span class="hint">&mdash; e.g. request payload, response</span></label>
           <div id="schemaList"></div>
@@ -437,9 +437,8 @@
     if(nonEmptyLines(s.outScope).length){h.push('<p><strong>Out of scope:</strong></p>');h.push(listHtml(s.outScope,"bullet"));}
 
     h.push('<h2>3. Schedule &amp; Trigger</h2>');
-    h.push('<ul class="d-ul"><li><strong>Execution Type:</strong> '+htmlEsc(s.execType.trim())+'</li><li><strong>Frequency:</strong> '+htmlEsc(s.frequency.trim())+'</li></ul>');
-    h.push('<h3>3.1 Application Trigger Conditions</h3>');
-    if(s.triggerDesc.trim())h.push('<p>'+nl2br(htmlEsc(s.triggerDesc.trim()))+'</p>');
+    var b3='<ul class="d-ul"><li><strong>Execution Type:</strong> '+htmlEsc(s.execType.trim())+'</li><li><strong>Frequency:</strong> '+htmlEsc(s.frequency.trim())+'</li><li><strong>Trigger Conditions:</strong> '+nl2br(htmlEsc(s.triggerDesc.trim()))+'</li></ul>';
+    h.push(b3);
     s.schemaTables.forEach(function(t){h.push(tableRO(t,ctr));});
 
     h.push('<h2>4. High-Level Flow</h2>');
@@ -552,8 +551,7 @@
     b.push(heading("3. Schedule & Trigger",1));
     b.push(para(run("\u2022 ")+run("Execution Type: ",{bold:true})+run(s.execType.trim()),"ListParagraph"));
     b.push(para(run("\u2022 ")+run("Frequency: ",{bold:true})+run(s.frequency.trim()),"ListParagraph"));
-    b.push(heading("3.1 Application Trigger Conditions",2));
-    if(s.triggerDesc.trim())b.push(para(run(s.triggerDesc.trim())));
+    b.push(para(run("\u2022 ")+run("Trigger Conditions: ",{bold:true})+run(s.triggerDesc.trim()),"ListParagraph"));
     s.schemaTables.forEach(function(t){b.push(docTableXml(t,ctr));});
 
     b.push(heading("4. High-Level Flow",1));

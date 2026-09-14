@@ -412,7 +412,7 @@
   }
   function buildPreview(s){
     var ctr={n:0};
-    var title='"'+(s.project.trim()||"Project Name")+'" Integration Specification';
+    var title=(s.project.trim()||"Project Name")+' Integration Specification';
     var h=[];
     h.push('<div class="d-title">'+htmlEsc(title)+'</div>');
     if(s.integrationName.trim())h.push('<p class="d-sub">'+htmlEsc(s.integrationName.trim())+'</p>');
@@ -520,7 +520,7 @@
   }
   function buildDocumentXml(s){
     var ctr={n:0},b=[];
-    var title='"'+(s.project.trim()||"Project Name")+'" Integration Specification';
+    var title=(s.project.trim()||"Project Name")+' Integration Specification';
     b.push(para(run(title),"Title"));
     if(s.integrationName.trim())b.push(para(run(s.integrationName.trim(),{italic:true,color:"5A6675",sz:24})));
     if(s.preparedBy.trim())b.push(para(run("Prepared by: "+s.preparedBy.trim(),{color:"6A7686",sz:18})));
